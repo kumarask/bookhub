@@ -1,0 +1,9 @@
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+# Keep configuration minimal to avoid parser/selector incompatibilities with older ruff versions.
+exclude = [".venv", "__pycache__", "build", "dist", "node_modules"]
+
+
+[tool.ruff.lint]
+per-file-ignores = { "services/*/app/__init__.py" = ["F401"] }

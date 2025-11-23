@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+python-jose
+passlib[bcrpyt]
+pydantic
+SQLAlchemy
+psycopg2-binary
+redis
+requests
+google-cloud-pubsub
+python-dotenv
+asyncio

@@ -1,0 +1,4 @@
+CREATE DATABASE authdb;
+CREATE DATABASE booksdb;
+CREATE DATABASE ordersdb;
+CREATE DATABASE reviewsdb;
