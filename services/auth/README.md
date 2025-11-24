@@ -23,7 +23,7 @@ Provides user registration, login, JWT-based authentication, refresh tokens, and
 ---
 
 ## Project Structure
-
+```
 auth-service/
 ├── app/
 │ ├── api/
@@ -49,7 +49,7 @@ auth-service/
 │ │ └── user_service.py # User-related business logic
 │ └── pubsub.py # Lightweight Pub/Sub helper
 └── README.md
-
+```
 ---
 
 ## Installation
