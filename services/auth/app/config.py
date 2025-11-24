@@ -1,6 +1,19 @@
 """
-Configuration for Auth Service.
-Handles environment variables and service settings.
+Configuration module for the Auth Service.
+
+This module centralizes environment variables and service settings used
+throughout the authentication service. It provides default values for
+database connections, Redis, JWT settings, token expiration times, and
+pub/sub mode, while allowing overrides via environment variables.
+
+Settings:
+    DATABASE_URL (str): SQLAlchemy database URL.
+    REDIS_URL (str): Redis connection URL.
+    JWT_SECRET_KEY (str): Secret key used for signing JWT tokens.
+    JWT_ALGORITHM (str): Algorithm used for JWT encoding/decoding.
+    ACCESS_TOKEN_EXPIRE_MINUTES (int): Expiration time for access tokens.
+    REFRESH_TOKEN_EXPIRE_DAYS (int): Expiration time for refresh tokens.
+    PUBSUB_MODE (str): Pub/Sub mode ("stub" or actual implementation).
 """
 
 import os

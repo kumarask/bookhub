@@ -1,5 +1,11 @@
 """
-Authentication service: login, registration, refresh tokens.
+Authentication service functions for handling user login, credential validation,
+and token generation.
+
+This module provides utilities to authenticate users, verify credentials,
+and generate JWT access tokens along with persistent refresh tokens.
+It integrates with the user service, hashing utilities, and token management
+to support secure authentication workflows.
 """
 
 from sqlalchemy.orm import Session
@@ -11,7 +17,22 @@ from app.schemas.auth import LoginRequest
 
 
 def authenticate_user(db: Session, username: str, password: str):
-    """Authenticate user credentials."""
+    """
+    Validate a user's login credentials.
+
+    Args:
+        db (Session): SQLAlchemy database session.
+        username (str): The username provided by the user.
+        password (str): The plain-text password provided by the user.
+
+    Returns:
+        User | None: The user object if authentication succeeds,
+                     otherwise None.
+
+    Notes:
+        - Fetches the user by username.
+        - Verifies the provided password using secure hashing.
+    """
     user = get_user_by_username(db, username)
     if not user:
         return None
@@ -21,16 +42,38 @@ def authenticate_user(db: Session, username: str, password: str):
 
 
 def login(db: Session, login_in: LoginRequest):
-    """Login user and generate access & refresh tokens."""
+    """
+    Authenticate a user and generate authentication tokens.
+
+    Args:
+        db (Session): SQLAlchemy database session.
+        login_in (LoginRequest): Login request containing username and password.
+
+    Returns:
+        dict | None: A dictionary containing:
+            - access_token (str): Newly issued JWT access token.
+            - refresh_token (str): Persistent refresh token.
+            - token_type (str): Type of token ("bearer").
+            - expires_in (int): Access token expiration time in seconds.
+            - user (User): Authenticated user object.
+          Returns None if authentication fails or the user is inactive.
+
+    Notes:
+        - First validates the user's credentials.
+        - Only active users can log in.
+        - Utilizes token services to create both access and refresh tokens.
+    """
     user = authenticate_user(db, login_in.username, login_in.password)
     if not user or not user.is_active:
         return None
+
     access_token = create_access_token(subject=user.id)
     refresh_token = create_refresh_token(db, user.id)
+
     return {
         "access_token": access_token,
         "refresh_token": refresh_token.token,
         "token_type": "bearer",
         "expires_in": 3600,
-        "user": user
+        "user": user,
     }
