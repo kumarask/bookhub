@@ -6,11 +6,9 @@ microservices. It supports a stub mode for local development and can be
 extended to real pub/sub systems such as GCP Pub/Sub or Kafka.
 """
 
-import os
 import json
 import asyncio
-
-PUBSUB_MODE = os.getenv("PUBSUB_MODE", "stub")
+from app.config import PUBSUB_MODE
 
 
 async def publish(topic: str, payload: dict):

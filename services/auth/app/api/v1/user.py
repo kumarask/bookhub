@@ -29,13 +29,13 @@ GET /api/v1/user/{user_id}
         - 404: User not found
 """
 
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.deps import get_db
 from app.models.user import User
 
 router = APIRouter(prefix="/api/v1/user", tags=["user"])
+
 
 @router.get("/", response_model=list[dict])
 def list_users(db: Session = Depends(get_db)):

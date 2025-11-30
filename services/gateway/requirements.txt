@@ -1,5 +1,6 @@
 fastapi
 uvicorn
 httpx
+python-jose[cryptography]
 redis
-python-jose
+python-multipart

@@ -48,7 +48,9 @@ def get_redis() -> Redis:
     return r
 
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> User:
+def get_current_user(
+    token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
+) -> User:
     """
     Retrieve the current user based on the provided JWT access token.
 
@@ -60,7 +62,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         User: The authenticated user instance.
 
     Raises:
-        HTTPException: 
+        HTTPException:
             - 401 Unauthorized if the token is invalid or expired.
             - 401 Unauthorized if the user does not exist in the database.
     """
@@ -92,5 +94,7 @@ def require_admin(user: User = Depends(get_current_user)) -> User:
         HTTPException: 403 Forbidden if the user is not an admin.
     """
     if not user.is_admin:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required"
+        )
     return user

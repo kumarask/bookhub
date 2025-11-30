@@ -70,8 +70,15 @@ services:
       - redis
 
   gateway:
-    build: ./services/gateway
-    env_file: .env
+    build: services/gateway
+    container_name: api_gateway
+    environment:
+      - AUTH_SERVICE_URL=http://localhost:8001
+      - BOOKS_SERVICE_URL=http://localhost:8002
+      - ORDERS_SERVICE_URL=http://localhost:8003
+      - REVIEWS_SERVICE_URL=http://localhost:8004
+      - REDIS_URL=redis://redis:6379/0
+      - JWT_SECRET_KEY=supersecret
     ports:
       - "8000:8000"
     depends_on:

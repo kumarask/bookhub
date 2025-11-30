@@ -8,3 +8,4 @@ passlib[bcrypt]
 redis
 httpx
 requests
+python-dotenv

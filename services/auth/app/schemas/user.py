@@ -21,6 +21,7 @@ class UserCreate(BaseModel):
         password (str): The user's raw password, which will be hashed.
         full_name (Optional[str]): The user's full name (optional).
     """
+
     email: EmailStr
     username: str
     password: str
@@ -39,10 +40,11 @@ class UserResponse(BaseModel):
         is_active (bool): Indicates whether the user account is active.
         is_admin (bool): Whether the user has administrative privileges.
         created_at (datetime): Timestamp when the user was created.
-    
+
     Notes:
         orm_mode = True allows compatibility with ORM objects such as SQLAlchemy models.
     """
+
     id: str
     email: EmailStr
     username: str
@@ -63,5 +65,6 @@ class UserUpdate(BaseModel):
         email (Optional[EmailStr]): The updated email address (optional).
         full_name (Optional[str]): The updated full name (optional).
     """
+
     email: Optional[EmailStr]
     full_name: Optional[str]

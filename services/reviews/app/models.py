@@ -1,69 +1,50 @@
 """
-SQLAlchemy models for the Reviews Service.
+Database models for the Reviews Service.
 
-This module defines the ORM models used by the Reviews Service to persist
-review data in a relational database. It includes:
-
-- A SQLAlchemy declarative base
-- A UUID generator helper for model primary keys
-- The `Review` model, representing individual book reviews
-
-These models integrate with the broader service through SQLAlchemy
-sessions created in the database utilities module. The `Review` model
-is used throughout the service for CRUD operations, analytics queries,
-and domain event emission.
+Defines the ORM model for storing book reviews in the database.
+Each review is associated with a specific book and user, and contains
+a rating, optional title and comment, along with timestamps for creation
+and updates.
 """
 
-import datetime
 import uuid
-
-from sqlalchemy import Column, DateTime, Integer, String, Text
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.ext.declarative import declarative_base
-
-Base = declarative_base()
-
-
-def gen_uuid():
-    """
-    Generate a new UUID string.
-
-    Returns:
-        str: A randomly generated UUID4 string.
-
-    This helper is used as the default primary key value generator
-    for the Review model.
-    """
-    return str(uuid.uuid4())
+from sqlalchemy import Column, String, Integer, Text, TIMESTAMP
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from sqlalchemy.sql import func
+from app.database import Base
 
 
 class Review(Base):
     """
     SQLAlchemy model representing a book review.
 
-    The `Review` model stores user-submitted ratings and optional textual
-    comments associated with a particular book. This model is used
-    across the service for creating, retrieving, updating, and deleting
-    reviews, as well as generating aggregate statistics.
-
     Attributes:
-        id (str): Primary key UUID identifying the review.
-        book_id (str): UUID of the book being reviewed.
-        user_id (str): UUID of the user who submitted the review.
-        rating (int): Numerical rating (typically 1–5).
-        title (str): Optional short title or summary for the review.
-        comment (str): Optional detailed text comment.
-        created_at (datetime): Timestamp of review creation.
-        updated_at (datetime): Timestamp of last update.
+        id (UUID): Primary key for the review.
+        book_id (UUID): ID of the book being reviewed.
+        user_id (UUID): ID of the user who created the review.
+        rating (int): Rating given by the user (typically 1-5).
+        title (str, optional): Title of the review.
+        comment (str, optional): Text content of the review.
+        created_at (datetime): Timestamp when the review was created.
+        updated_at (datetime): Timestamp when the review was last updated.
+
+    Constraints:
+        - Unique constraint on (book_id, user_id) to ensure a user can
+          only review a book once.
     """
 
     __tablename__ = "reviews"
 
-    id = Column(UUID(as_uuid=False), primary_key=True, default=gen_uuid)
-    book_id = Column(UUID(as_uuid=False), nullable=False)
-    user_id = Column(UUID(as_uuid=False), nullable=False)
+    id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    book_id = Column(PG_UUID(as_uuid=True), nullable=False)
+    user_id = Column(PG_UUID(as_uuid=True), nullable=False)
     rating = Column(Integer, nullable=False)
-    title = Column(String)
-    comment = Column(Text)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.datetime.utcnow)
+    title = Column(String, nullable=True)
+    comment = Column(Text, nullable=True)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    updated_at = Column(TIMESTAMP(timezone=True), onupdate=func.now())
+
+    __table_args__ = (
+        # Enforce unique review per user per book
+        {"sqlite_autoincrement": True},
+    )

@@ -7,19 +7,20 @@ points for the service.
 
 Typical contents:
 - :mod:`main` - FastAPI application and HTTP endpoints for reviews.
-- :mod:`db` - SQLAlchemy engine and session factory.
+- :mod:`database` - SQLAlchemy engine and session factory.
 - :mod:`models` - ORM models representing reviews and related data.
 - :mod:`schemas` - Pydantic request/response models used by endpoints.
 - :mod:`deps` - dependency helpers (database session, auth placeholders).
 
 Usage:
-	Import submodules as needed::
+        Import submodules as needed::
 
-		from . import models, db
+                from . import models, db
 
 Notes:
-	Keep package-level initialization minimal and avoid heavy side
-	effects at import time. Prefer performing startup tasks in
-	application startup handlers (for example, :func:`main.startup`).
-"""
+        Keep package-level initialization minimal and avoid heavy side
+        effects at import time. Prefer performing startup tasks in
+        application startup handlers (for example, :func:`main.startup`).
 
+Author: Kumara S K
+"""

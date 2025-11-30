@@ -10,5 +10,6 @@ events are emitted.
 
 All public functions include concise docstrings describing their
 arguments, return values and raised HTTP exceptions where applicable.
-"""
 
+Author: Kumara S K
+"""

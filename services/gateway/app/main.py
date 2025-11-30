@@ -1,125 +1,149 @@
-"""API Gateway service.
+"""
+API Gateway for all microservices.
 
-This module implements a lightweight HTTP gateway that forwards requests
-to internal services (auth, books, orders, reviews) based on path
-prefixes defined in ``SERVICE_MAP``. It also implements a simple
-rate-limiting middleware backed by Redis via :class:`RateLimiter`.
+This gateway serves as the central entry point for all client requests
+and provides the following features:
 
-Design notes:
-- The gateway preserves request headers (except ``Host``) and forwards
-    request bodies and query parameters to the target service.
-- Health checks call each service's health endpoint and aggregate
-    results to provide an overall view used by orchestration tooling.
-- The proxy is intentionally simple and does not perform request
-    transformation, authentication, or advanced routing. Extend with
-    authentication, tracing, or circuit-breaker behavior as needed.
+1. Request Routing:
+   - Routes requests to the appropriate microservice (auth, books, orders, reviews)
+   - Preserves HTTP method, headers, query parameters, and request body
+
+2. Authentication:
+   - Validates JWT tokens using the `get_current_user` dependency
+   - Attaches user information to requests for downstream services
+
+3. Rate Limiting:
+   - Enforces Redis-based rate limits based on user type (unauthenticated, authenticated, admin)
+
+4. Request/Response Logging:
+   - Can be extended to log all incoming requests and proxied responses
+
+5. CORS Handling:
+   - Configured to allow requests from any origin with all standard HTTP methods and headers
+
+6. Health Check:
+   - `/health` endpoint checks the status of all microservices
+   - Returns overall gateway status and individual service health
+
+Routes:
+- `/api/v1/{service}/{path:path}`: Proxies all requests to the corresponding microservice
+  - Supported services: `auth`, `books`, `orders`, `reviews`
+  - Supports GET, POST, PUT, DELETE methods
 """
 
-import os
-import time
-
+from fastapi import FastAPI, Request, Depends
+from fastapi.middleware.cors import CORSMiddleware
 import httpx
-from fastapi import FastAPI, HTTPException, Request, Response
+from datetime import datetime
+from app.deps import get_current_user
+from app.rate_limiter import rate_limit
+from app.config import (
+    AUTH_SERVICE_URL,
+    BOOKS_SERVICE_URL,
+    ORDERS_SERVICE_URL,
+    REVIEWS_SERVICE_URL,
+)
 
-from .rate_limiter import RateLimiter
+app = FastAPI(title="API Gateway", version="1.0")
 
-app = FastAPI(title="API Gateway")
 
-SERVICE_MAP = {
-    "/api/v1/auth": "http://auth:8001/api/v1/auth",
-    "/api/v1/books": "http://books:8002/api/v1/books",
-    "/api/v1/orders": "http://orders:8003/api/v1/orders",
-    "/api/v1/reviews": "http://reviews:8004/api/v1/reviews",
-}
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-redis_url = os.getenv("REDIS_URL", "redis://redis:6379/0")
-rate_limiter = RateLimiter(redis_url=redis_url)
+
+async def proxy_request(service_url: str, request: Request):
+    """
+    Proxy an incoming request to the target microservice.
+
+    Args:
+        service_url (str): Base URL of the target microservice.
+        request (Request): FastAPI Request object representing the incoming client request.
+
+    Returns:
+        httpx.Response: Response received from the proxied microservice.
+    """
+    async with httpx.AsyncClient() as client:
+        url = f"{service_url}{request.url.path.replace('/api/v1', '')}"
+        headers = dict(request.headers)
+        method = request.method
+        body = await request.body()
+        response = await client.request(
+            method, url, headers=headers, content=body, params=request.query_params
+        )
+        return response
 
 
 @app.get("/health")
-def health():
-    """Health check for the gateway and downstream services.
-
-    Calls the health endpoint of each mapped service and returns an
-    aggregate view including per-service health statuses and a timestamp.
+async def health_check():
+    """
+    Perform a health check for the API Gateway and all registered microservices.
 
     Returns:
-        dict: overall status, per-service statuses and a timestamp string
-            in UTC.
+        dict: Health status containing:
+            - "status": Overall gateway status
+            - "services": Dictionary mapping each microservice name to "healthy" or "unhealthy"
+            - "timestamp": Current UTC timestamp in ISO 8601 format
     """
     services = {}
-    for name, url in SERVICE_MAP.items():
+    for name, url in [
+        ("auth", AUTH_SERVICE_URL),
+        ("books", BOOKS_SERVICE_URL),
+        ("orders", ORDERS_SERVICE_URL),
+        ("reviews", REVIEWS_SERVICE_URL),
+    ]:
         try:
-            r = httpx.get(url.replace("/api/v1", "") + "/health", timeout=2.0)
-            services[name.split("/")[-1]] = (
-                "healthy" if r.status_code == 200 else "unhealthy"
-            )
-        except Exception:
-            services[name.split("/")[-1]] = "unhealthy"
+            async with httpx.AsyncClient() as client:
+                r = await client.get(f"{url}/health")
+                services[name] = "healthy" if r.status_code == 200 else "unhealthy"
+        except:
+            services[name] = "unhealthy"
     return {
         "status": "healthy",
         "services": services,
-        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "timestamp": datetime.utcnow().isoformat(),
     }
 
 
-@app.middleware("http")
-async def throttle(request: Request, call_next):
-    """Rate-limiting middleware.
-
-    Determines an identity for the request (prefer an authorization header
-    value, otherwise the client IP) and asks :class:`RateLimiter` whether
-    the request should be allowed. If not allowed a 429 is raised.
-
-    This middleware should be lightweight and non-blocking so it runs for
-    every incoming HTTP request.
+@app.api_route(
+    "/api/v1/{service}/{path:path}", methods=["GET", "POST", "PUT", "DELETE"]
+)
+async def gateway_route(
+    service: str, path: str, request: Request, user=Depends(get_current_user)
+):
     """
-    identity = request.headers.get("authorization") or request.client.host
-    allowed = await rate_limiter.allow_request(identity)
-    if not allowed:
-        raise HTTPException(status_code=429, detail="Too many requests")
-    return await call_next(request)
+    Generic route to proxy requests to appropriate microservices.
 
-
-@app.api_route("/{full_path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
-async def proxy(full_path: str, request: Request):
-    """Catch-all proxy that forwards requests to internal services.
-
-    The route receives any path and method and forwards it to the
-    appropriate backend service based on prefix matching against
-    ``SERVICE_MAP``. Request headers (except Host), body and query
-    parameters are forwarded. The backend response content, status code
-    and headers are returned verbatim.
+    Performs rate limiting and authentication before forwarding requests.
 
     Args:
-        full_path (str): the full path captured by the catch-all route.
-        request (Request): the incoming FastAPI request object.
+        service (str): Target microservice name (auth, books, orders, reviews)
+        path (str): Path of the request to forward to the microservice
+        request (Request): FastAPI Request object
+        user (dict, optional): Authenticated user info provided by dependency injection
 
     Returns:
-        Response: a FastAPI Response constructed from the upstream service
-            response.
+        tuple: JSON response from microservice and the HTTP status code
 
     Raises:
-        HTTPException: 404 when no backend matches the requested path.
+        HTTPException: If rate limit is exceeded or service name is unknown
     """
-    path = "/" + full_path
-    for prefix, target in SERVICE_MAP.items():
-        if path.startswith(prefix):
-            suffix = path[len(prefix) :]
-            url = target + suffix
-            async with httpx.AsyncClient() as client:
-                headers = {
-                    k: v for k, v in request.headers.items() if k.lower() != "host"
-                }
-                body = await request.body()
-                resp = await client.request(
-                    request.method,
-                    url,
-                    headers=headers,
-                    content=body,
-                    params=request.query_params,
-                )
-            return Response(
-                content=resp.content, status_code=resp.status_code, headers=resp.headers
-            )
-    raise HTTPException(status_code=404, detail="Not found")
+    await rate_limit(request, user)
+
+    if service == "auth":
+        url = AUTH_SERVICE_URL
+    elif service == "books":
+        url = BOOKS_SERVICE_URL
+    elif service == "orders":
+        url = ORDERS_SERVICE_URL
+    elif service == "reviews":
+        url = REVIEWS_SERVICE_URL
+    else:
+        return {"error": "Unknown service"}
+
+    response = await proxy_request(url, request)
+    return response.json(), response.status_code

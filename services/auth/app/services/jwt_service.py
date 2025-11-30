@@ -13,22 +13,22 @@ Features:
 - Clear exception handling for invalid or expired tokens.
 """
 
-import os
 import datetime
 from typing import Optional
 
 import jwt
 from fastapi import HTTPException, status
+from app.config import (
+    JWT_SECRET_KEY as JWT_SECRET,
+    JWT_ALGORITHM,
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+    REFRESH_TOKEN_EXPIRE_DAYS,
+)
 
 
-# JWT configuration
-JWT_SECRET = os.getenv("JWT_SECRET", "supersecretkey")
-JWT_ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 60))
-REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", 7))
-
-
-def create_access_token(user_id: str, expires_delta: Optional[datetime.timedelta] = None) -> str:
+def create_access_token(
+    user_id: str, expires_delta: Optional[datetime.timedelta] = None
+) -> str:
     """
     Create a signed JWT access token for the given user.
 
@@ -75,21 +75,18 @@ def verify_access_token(token: str) -> str:
 
         if user_id is None:
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Token payload invalid"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Token payload invalid"
             )
 
         return user_id
 
     except jwt.ExpiredSignatureError:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token expired"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired"
         )
     except jwt.InvalidTokenError:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
         )
 
 
@@ -104,7 +101,9 @@ def create_refresh_token() -> str:
         This function uses the same signing key as the access token but sets
         a much longer expiration period.
     """
-    expire = datetime.datetime.utcnow() + datetime.timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    expire = datetime.datetime.utcnow() + datetime.timedelta(
+        days=REFRESH_TOKEN_EXPIRE_DAYS
+    )
     payload = {"exp": expire}
     token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
     return token
@@ -131,11 +130,9 @@ def verify_refresh_token(token: str) -> bool:
 
     except jwt.ExpiredSignatureError:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Refresh token expired"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh token expired"
         )
     except jwt.InvalidTokenError:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid refresh token"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
         )

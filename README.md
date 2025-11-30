@@ -26,15 +26,36 @@ This repository contains a full working scaffold for the BookHub capstone:
    ```
 4. Start all services
    ```bash
+   docker compose build --no-cache
    docker compose up --build
    ```
-5. Open Swagger docs:
+5. Check logs if a service fails:
+   ```bash
+   docker compose ps
+   docker compose logs auth --tail 200
+   docker compose logs books --tail 200
+   ```
+6. Open Swagger docs:
    - Gateway: http://localhost:8000/docs
    - Auth: http://localhost:8001/docs
    - Books: http://localhost:8002/docs
    - Orders: http://localhost:8003/docs
    - Reviews: http://localhost:8004/docs
 
+## Code Format
+1. Install ruff into your environment
+   ```bash
+   pip install -r requirements-dev.txt
+   ```
+2. Run ruff checks and/or autoformat:
+   ```bash
+   ruff check services
+   ```
+3. Fix formatting automatically:
+   ```bash
+   ruff format services
+   ruff check services
+   ```
 ## Notes
 - The project uses a Pub/Sub **stub** by default for local development. Set `PUBSUB_MODE=gcp` and provide credentials to use real GCP Pub/Sub.
 - Redis is used for caching and rate-limiting.

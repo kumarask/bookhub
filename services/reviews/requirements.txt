@@ -7,3 +7,5 @@ python-jose
 passlib[bcrypt]
 redis
 httpx
+requests
+python-dotenv

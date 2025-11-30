@@ -44,7 +44,7 @@ router = APIRouter(prefix="/api/v1/books", tags=["Books"])
 async def create_book(
     book: schemas.BookCreate,
     db: Session = Depends(database.get_db),
-    user=Depends(auth.admin_required)
+    user=Depends(auth.admin_required),
 ):
     """
     Create a new book (Admin only).
@@ -70,7 +70,9 @@ async def create_book(
 
     # Cache book detail
     cache_key = f"book:{db_book.id}"
-    await cache.redis_client.set(cache_key, json.dumps(jsonable_encoder(db_book)), ex=3600)
+    await cache.redis_client.set(
+        cache_key, json.dumps(jsonable_encoder(db_book)), ex=3600
+    )
 
     return schemas.BookOut.from_orm(db_book)
 
@@ -86,7 +88,7 @@ async def list_books(
     min_price: Optional[float] = None,
     max_price: Optional[float] = None,
     sort_by: Optional[str] = Query("title", regex="^(price|title|published_date)$"),
-    sort_order: Optional[str] = Query("asc", regex="^(asc|desc)$")
+    sort_order: Optional[str] = Query("asc", regex="^(asc|desc)$"),
 ):
     """
     List books with optional filters, pagination, and sorting.
@@ -107,11 +109,18 @@ async def list_books(
         schemas.BookListOut: Paginated list of books with metadata
     """
     # Create a filters hash for caching
-    filters = json.dumps({
-        "category": category, "author": author, "search": search,
-        "min_price": min_price, "max_price": max_price,
-        "sort_by": sort_by, "sort_order": sort_order
-    }, sort_keys=True)
+    filters = json.dumps(
+        {
+            "category": category,
+            "author": author,
+            "search": search,
+            "min_price": min_price,
+            "max_price": max_price,
+            "sort_by": sort_by,
+            "sort_order": sort_order,
+        },
+        sort_keys=True,
+    )
     filters_hash = md5(filters.encode()).hexdigest()
     cache_key = f"books:list:{page}:{filters_hash}"
 
@@ -122,13 +131,15 @@ async def list_books(
     # Query
     query = db.query(book_models.Book)
     if category:
-        query = query.join(category_models.Category).filter(category_models.Category.name == category)
+        query = query.join(category_models.Category).filter(
+            category_models.Category.name == category
+        )
     if author:
         query = query.filter(book_models.Book.author.ilike(f"%{author}%"))
     if search:
         query = query.filter(
-            book_models.Book.title.ilike(f"%{search}%") |
-            book_models.Book.description.ilike(f"%{search}%")
+            book_models.Book.title.ilike(f"%{search}%")
+            | book_models.Book.description.ilike(f"%{search}%")
         )
     if min_price is not None:
         query = query.filter(book_models.Book.price >= min_price)
@@ -156,10 +167,12 @@ async def list_books(
         total=total,
         page=page,
         limit=limit,
-        pages=(total + limit - 1) // limit
+        pages=(total + limit - 1) // limit,
     )
 
-    await cache.redis_client.set(cache_key, json.dumps(jsonable_encoder(result)), ex=900)
+    await cache.redis_client.set(
+        cache_key, json.dumps(jsonable_encoder(result)), ex=900
+    )
     return result
 
 
@@ -188,7 +201,9 @@ async def get_book_detail(book_id: UUID, db: Session = Depends(database.get_db))
         raise HTTPException(status_code=404, detail="Book not found")
 
     book_detail = schemas.BookDetailOut.from_orm(db_book)
-    await cache.redis_client.set(cache_key, json.dumps(jsonable_encoder(book_detail)), ex=3600)
+    await cache.redis_client.set(
+        cache_key, json.dumps(jsonable_encoder(book_detail)), ex=3600
+    )
     return book_detail
 
 
@@ -197,7 +212,7 @@ async def update_book(
     book_id: UUID,
     updates: schemas.BookUpdate,
     db: Session = Depends(database.get_db),
-    user=Depends(auth.admin_required)
+    user=Depends(auth.admin_required),
 ):
     """
     Update a book (Admin only).
@@ -230,7 +245,9 @@ async def update_book(
 
     # Update cache
     cache_key = f"book:{book_id}"
-    await cache.redis_client.set(cache_key, json.dumps(jsonable_encoder(db_book)), ex=3600)
+    await cache.redis_client.set(
+        cache_key, json.dumps(jsonable_encoder(db_book)), ex=3600
+    )
 
     return schemas.BookOut.from_orm(db_book)
 
@@ -239,7 +256,7 @@ async def update_book(
 async def delete_book(
     book_id: UUID,
     db: Session = Depends(database.get_db),
-    user=Depends(auth.admin_required)
+    user=Depends(auth.admin_required),
 ):
     """
     Delete a book (Admin only).
@@ -274,7 +291,7 @@ async def update_stock(
     book_id: UUID,
     payload: schemas.BookStockUpdate,
     db: Session = Depends(database.get_db),
-    _=Depends(deps.verify_internal_secret)
+    _=Depends(deps.verify_internal_secret),
 ):
     """
     Update book stock (Internal use only).
@@ -305,18 +322,18 @@ async def update_stock(
     db.refresh(db_book)
 
     if db_book.stock_quantity < 10:
-        await events.publish_event("book.stock_low", {
-            "id": str(db_book.id),
-            "stock_quantity": db_book.stock_quantity
-        })
+        await events.publish_event(
+            "book.stock_low",
+            {"id": str(db_book.id), "stock_quantity": db_book.stock_quantity},
+        )
 
     cache_key = f"book:{book_id}"
-    await cache.redis_client.set(cache_key, json.dumps(jsonable_encoder(db_book)), ex=3600)
+    await cache.redis_client.set(
+        cache_key, json.dumps(jsonable_encoder(db_book)), ex=3600
+    )
 
     return schemas.BookStockOut(
         id=db_book.id,
         stock_quantity=db_book.stock_quantity,
-        updated_at=db_book.updated_at
+        updated_at=db_book.updated_at,
     )
-
-

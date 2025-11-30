@@ -12,12 +12,12 @@ The models ensure type safety, enforce field validation rules, and provide
 a structured interface between API endpoints and clients.
 """
 
-
 from pydantic import BaseModel, EmailStr, constr
 from typing import Optional
 from datetime import datetime
 
 # Request Schemas
+
 
 class RegisterSchema(BaseModel):
     """
@@ -29,9 +29,10 @@ class RegisterSchema(BaseModel):
         password (str): A password with a minimum length of 6 characters.
         full_name (Optional[str]): The user's full name (optional).
     """
+
     email: EmailStr
-    username: constr(min_length=3, max_length=50) # type: ignore
-    password: constr(min_length=6) # type: ignore
+    username: constr(min_length=3, max_length=50)  # type: ignore
+    password: constr(min_length=6)  # type: ignore
     full_name: Optional[str]
 
 
@@ -43,6 +44,7 @@ class LoginSchema(BaseModel):
         username (str): The username or email used for login.
         password (str): The user's password.
     """
+
     username: str
     password: str
 
@@ -54,6 +56,7 @@ class RefreshTokenSchema(BaseModel):
     Fields:
         refresh_token (str): The refresh token issued during login.
     """
+
     refresh_token: str
 
 
@@ -67,6 +70,7 @@ class TokenSchema(BaseModel):
         token_type (str): Token type, default is 'bearer'.
         expires_in (int): Expiration time of the access token in seconds.
     """
+
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
@@ -87,6 +91,7 @@ class UserSchema(BaseModel):
         created_at (datetime): Timestamp of user creation.
         updated_at (Optional[datetime]): Timestamp of last profile update.
     """
+
     id: str
     email: EmailStr
     username: str
@@ -109,6 +114,7 @@ class UserResponseSchema(BaseModel):
         is_active (bool): Indicates if the user is active.
         created_at (datetime): When the user was created.
     """
+
     id: str
     email: EmailStr
     username: str
@@ -124,6 +130,7 @@ class ErrorResponseSchema(BaseModel):
     Fields:
         detail (str): Description of the error encountered.
     """
+
     detail: str
 
 
@@ -140,6 +147,7 @@ class UserProfileSchema(BaseModel):
         is_admin (bool): Whether the user has admin privileges.
         created_at (datetime): Account creation timestamp.
     """
+
     id: str
     email: str
     username: str
@@ -156,6 +164,7 @@ class LogoutRequestSchema(BaseModel):
     Fields:
         refresh_token (str): The refresh token to revoke.
     """
+
     refresh_token: str
 
 
@@ -166,6 +175,7 @@ class MessageResponseSchema(BaseModel):
     Fields:
         message (str): A human-readable message describing the result.
     """
+
     message: str
 
 
@@ -177,6 +187,7 @@ class ProfileUpdateSchema(BaseModel):
         full_name (str): The user's updated full name.
         email (EmailStr): The user's updated email address.
     """
+
     full_name: str
     email: EmailStr
 

@@ -36,7 +36,11 @@ from app.schemas.auth import (
     MessageResponseSchema,
     LogoutRequestSchema,
 )
-from app.services.jwt_service import create_access_token, create_refresh_token, verify_refresh_token
+from app.services.jwt_service import (
+    create_access_token,
+    create_refresh_token,
+    verify_refresh_token,
+)
 from app.services.token_service import blacklist_token
 from app.pubsub import publish
 
@@ -49,7 +53,10 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
     response_model=UserResponseSchema,
     status_code=status.HTTP_201_CREATED,
     responses={
-        400: {"model": ErrorResponseSchema, "description": "Email or username already exists"},
+        400: {
+            "model": ErrorResponseSchema,
+            "description": "Email or username already exists",
+        },
         422: {"model": ErrorResponseSchema, "description": "Validation error"},
     },
 )
@@ -71,7 +78,11 @@ def register(payload: RegisterSchema, db: Session = Depends(get_db)):
     Raises:
         HTTPException: 400 if email or username already exists.
     """
-    if db.query(User).filter((User.email == payload.email) | (User.username == payload.username)).first():
+    if (
+        db.query(User)
+        .filter((User.email == payload.email) | (User.username == payload.username))
+        .first()
+    ):
         raise HTTPException(status_code=400, detail="Email or username already exists")
 
     new_user = User(
@@ -83,14 +94,16 @@ def register(payload: RegisterSchema, db: Session = Depends(get_db)):
         is_active=True,
         is_admin=False,
         created_at=datetime.datetime.utcnow(),
-        updated_at=datetime.datetime.utcnow()
+        updated_at=datetime.datetime.utcnow(),
     )
 
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
 
-    asyncio.create_task(publish("user.registered", {"user_id": new_user.id, "email": new_user.email}))
+    asyncio.create_task(
+        publish("user.registered", {"user_id": new_user.id, "email": new_user.email})
+    )
 
     return UserResponseSchema(
         id=new_user.id,
@@ -98,7 +111,7 @@ def register(payload: RegisterSchema, db: Session = Depends(get_db)):
         username=new_user.username,
         full_name=new_user.full_name,
         is_active=new_user.is_active,
-        created_at=new_user.created_at
+        created_at=new_user.created_at,
     )
 
 
@@ -110,7 +123,9 @@ def register(payload: RegisterSchema, db: Session = Depends(get_db)):
         403: {"model": ErrorResponseSchema, "description": "Account inactive"},
     },
 )
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+def login(
+    form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
+):
     """
     Authenticate a user and issue access & refresh tokens.
 
@@ -136,7 +151,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     refresh_token = RefreshToken(
         user_id=user.id,
         token=refresh_token_str,
-        expires_at=datetime.datetime.utcnow() + datetime.timedelta(days=7)
+        expires_at=datetime.datetime.utcnow() + datetime.timedelta(days=7),
     )
     db.add(refresh_token)
     db.commit()
@@ -145,7 +160,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         "access_token": access_token,
         "refresh_token": refresh_token_str,
         "token_type": "bearer",
-        "expires_in": 3600
+        "expires_in": 3600,
     }
 
 
@@ -153,7 +168,10 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     "/refresh",
     response_model=TokenSchema,
     responses={
-        401: {"model": ErrorResponseSchema, "description": "Invalid or expired refresh token"},
+        401: {
+            "model": ErrorResponseSchema,
+            "description": "Invalid or expired refresh token",
+        },
         422: {"model": ErrorResponseSchema, "description": "Validation error"},
     },
 )
@@ -179,8 +197,16 @@ def refresh_token(payload: RefreshTokenSchema, db: Session = Depends(get_db)):
     return TokenSchema(access_token=access_token, token_type="bearer", expires_in=3600)
 
 
-@router.get("/me", response_model=UserResponseSchema, responses={401: {"description": "Unauthorized"}})
-def get_me(db: Session = Depends(get_db), redis=Depends(get_redis), current_user: User = Depends(get_current_user)):
+@router.get(
+    "/me",
+    response_model=UserResponseSchema,
+    responses={401: {"description": "Unauthorized"}},
+)
+def get_me(
+    db: Session = Depends(get_db),
+    redis=Depends(get_redis),
+    current_user: User = Depends(get_current_user),
+):
     """
     Retrieve the currently authenticated user's profile.
 
@@ -209,15 +235,23 @@ def get_me(db: Session = Depends(get_db), redis=Depends(get_redis), current_user
         "full_name": current_user.full_name,
         "is_active": current_user.is_active,
         "is_admin": current_user.is_admin,
-        "created_at": current_user.created_at.isoformat()
+        "created_at": current_user.created_at.isoformat(),
     }
 
     redis.set(cache_key, json.dumps(user_data), ex=3600)
     return user_data
 
 
-@router.post("/logout", response_model=MessageResponseSchema, responses={401: {"description": "Unauthorized"}})
-def logout(body: LogoutRequestSchema, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+@router.post(
+    "/logout",
+    response_model=MessageResponseSchema,
+    responses={401: {"description": "Unauthorized"}},
+)
+def logout(
+    body: LogoutRequestSchema,
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db),
+):
     """
     Logout a user by invalidating the provided refresh token.
 
@@ -234,7 +268,9 @@ def logout(body: LogoutRequestSchema, token: str = Depends(oauth2_scheme), db: S
     """
     user = get_current_user(token, db)
     if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized (invalid/expired token)")
+        raise HTTPException(
+            status_code=401, detail="Unauthorized (invalid/expired token)"
+        )
 
     if not verify_refresh_token(body.refresh_token, db):
         raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
@@ -244,7 +280,12 @@ def logout(body: LogoutRequestSchema, token: str = Depends(oauth2_scheme), db: S
 
 
 @router.put("/profile", response_model=UpdatedUserResponseSchema)
-def update_profile(payload: ProfileUpdateSchema, db: Session = Depends(get_db), current_user: User = Depends(get_current_user), redis=Depends(get_redis)):
+def update_profile(
+    payload: ProfileUpdateSchema,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    redis=Depends(get_redis),
+):
     """
     Update the currently authenticated user's profile.
 
@@ -263,7 +304,11 @@ def update_profile(payload: ProfileUpdateSchema, db: Session = Depends(get_db), 
     Raises:
         HTTPException: 400 if email is already taken by another user.
     """
-    if db.query(User).filter(User.email == payload.email, User.id != current_user.id).first():
+    if (
+        db.query(User)
+        .filter(User.email == payload.email, User.id != current_user.id)
+        .first()
+    ):
         raise HTTPException(status_code=400, detail="Email already exists")
 
     current_user.full_name = payload.full_name
@@ -272,16 +317,26 @@ def update_profile(payload: ProfileUpdateSchema, db: Session = Depends(get_db), 
     db.commit()
     db.refresh(current_user)
 
-    asyncio.create_task(publish("user.updated", {"user_id": current_user.id, "email": current_user.email}))
+    asyncio.create_task(
+        publish(
+            "user.updated", {"user_id": current_user.id, "email": current_user.email}
+        )
+    )
 
-    redis.set(f"user:{current_user.id}", json.dumps({
-        "id": str(current_user.id),
-        "email": current_user.email,
-        "username": current_user.username,
-        "full_name": current_user.full_name,
-        "is_active": current_user.is_active,
-        "is_admin": current_user.is_admin,
-        "created_at": current_user.created_at.isoformat()
-    }), ex=3600)
+    redis.set(
+        f"user:{current_user.id}",
+        json.dumps(
+            {
+                "id": str(current_user.id),
+                "email": current_user.email,
+                "username": current_user.username,
+                "full_name": current_user.full_name,
+                "is_active": current_user.is_active,
+                "is_admin": current_user.is_admin,
+                "created_at": current_user.created_at.isoformat(),
+            }
+        ),
+        ex=3600,
+    )
 
     return current_user
