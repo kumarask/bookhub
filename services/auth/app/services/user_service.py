@@ -9,7 +9,7 @@ ensuring consistent handling of user-related data and operations.
 
 from sqlalchemy.orm import Session
 from app.models.user import User
-from app.security.hashing import hash_password
+from app.security.hashing import get_password_hash
 from app.schemas.user import UserCreate, UserUpdate
 from datetime import datetime
 
@@ -33,7 +33,7 @@ def create_user(db: Session, user_in: UserCreate) -> User:
     user = User(
         email=user_in.email,
         username=user_in.username,
-        hashed_password=hash_password(user_in.password),
+        hashed_password=get_password_hash(user_in.password),
         full_name=user_in.full_name,
         is_active=True,
         is_admin=False,

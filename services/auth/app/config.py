@@ -19,7 +19,7 @@ Settings:
 import os
 
 DATABASE_URL = os.getenv(
-    "DATABASE_URL", "postgresql+psycopg2://postgres:postgres@postgres:5432/postgres"
+    "DATABASE_URL", "postgresql+psycopg2://postgres:postgres@postgres:5432/authdb"
 )
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "supersecretkey")

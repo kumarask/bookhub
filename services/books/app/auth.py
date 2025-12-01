@@ -11,6 +11,7 @@ These utilities integrate with FastAPI's dependency injection system
 and use OAuth2 Bearer tokens for authentication.
 """
 
+import requests
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
@@ -46,6 +47,29 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         )
 
 
+def get_user_info(user_id: str):
+    """
+    Fetch user information from the authentication service.
+
+    Args:
+        user_id (str): The unique identifier of the user.
+
+    Returns:
+        dict: A dictionary containing the user's information as returned
+              by the authentication service in JSON format.
+
+    Raises:
+        requests.exceptions.RequestException: If there is an issue
+              with the HTTP request to the authentication service.
+    """
+    response = requests.get(
+        f"{AUTH_URL}/api/v1/user/{user_id}",
+        headers={"Content-Type": "application/json"},
+        params={},
+    )
+    return response.json()
+
+
 def admin_required(user: dict = Depends(get_current_user)):
     """
     Dependency that ensures the authenticated user has admin privileges.
@@ -59,7 +83,8 @@ def admin_required(user: dict = Depends(get_current_user)):
     Raises:
         HTTPException: If the authenticated user is not an admin.
     """
-    if not user.get("is_admin", False):
+    user_data = get_user_info(user.get("sub", ""))
+    if not user_data.get("is_admin", False):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Admin privileges required"
         )

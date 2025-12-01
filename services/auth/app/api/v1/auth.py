@@ -17,13 +17,18 @@ import json
 import uuid
 import datetime
 import asyncio
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    status,
+    BackgroundTasks,
+)
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.deps import get_db, get_current_user, get_redis
 from app.models.user import User
-from app.models.refresh_token import RefreshToken
 from app.security.hashing import get_password_hash
 from app.schemas.auth import (
     RegisterSchema,
@@ -36,13 +41,12 @@ from app.schemas.auth import (
     MessageResponseSchema,
     LogoutRequestSchema,
 )
-from app.services.jwt_service import (
-    create_access_token,
-    create_refresh_token,
-    verify_refresh_token,
-)
+from app.services.token_service import verify_refresh_token
+from app.security.jwt import create_access_token
 from app.services.token_service import blacklist_token
 from app.pubsub import publish
+from app.services import auth_service
+
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
@@ -60,7 +64,11 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
         422: {"model": ErrorResponseSchema, "description": "Validation error"},
     },
 )
-def register(payload: RegisterSchema, db: Session = Depends(get_db)):
+def register(
+    payload: RegisterSchema,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
     """
     Register a new user.
 
@@ -101,8 +109,13 @@ def register(payload: RegisterSchema, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
 
-    asyncio.create_task(
-        publish("user.registered", {"user_id": new_user.id, "email": new_user.email})
+    # Schedule the async publish task in the background
+    background_tasks.add_task(
+        lambda: asyncio.run(
+            publish(
+                "user.registered", {"user_id": new_user.id, "email": new_user.email}
+            )
+        )
     )
 
     return UserResponseSchema(
@@ -139,26 +152,10 @@ def login(
     Raises:
         HTTPException: 401 if invalid credentials, 403 if account inactive.
     """
-    user = db.query(User).filter(User.username == form_data.username).first()
-    if not user or not user.verify_password(form_data.password):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-    if not user.is_active:
-        raise HTTPException(status_code=403, detail="Account inactive")
-
-    access_token = create_access_token(str(user.id))
-    refresh_token_str = create_refresh_token()
-
-    refresh_token = RefreshToken(
-        user_id=user.id,
-        token=refresh_token_str,
-        expires_at=datetime.datetime.utcnow() + datetime.timedelta(days=7),
-    )
-    db.add(refresh_token)
-    db.commit()
-
+    data = auth_service.login(db, form_data)
     return {
-        "access_token": access_token,
-        "refresh_token": refresh_token_str,
+        "access_token": data["access_token"],
+        "refresh_token": data["refresh_token"],
         "token_type": "bearer",
         "expires_in": 3600,
     }
@@ -194,7 +191,12 @@ def refresh_token(payload: RefreshTokenSchema, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
 
     access_token = create_access_token(user_id)
-    return TokenSchema(access_token=access_token, token_type="bearer", expires_in=3600)
+    return TokenSchema(
+        access_token=access_token,
+        refresh_token=payload.refresh_token,
+        token_type="bearer",
+        expires_in=3600,
+    )
 
 
 @router.get(
@@ -282,6 +284,7 @@ def logout(
 @router.put("/profile", response_model=UpdatedUserResponseSchema)
 def update_profile(
     payload: ProfileUpdateSchema,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     redis=Depends(get_redis),
@@ -317,9 +320,13 @@ def update_profile(
     db.commit()
     db.refresh(current_user)
 
-    asyncio.create_task(
-        publish(
-            "user.updated", {"user_id": current_user.id, "email": current_user.email}
+    # Schedule the async publish task in the background
+    background_tasks.add_task(
+        lambda: asyncio.run(
+            publish(
+                "user.updated",
+                {"user_id": current_user.id, "email": current_user.email},
+            )
         )
     )
 

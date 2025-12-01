@@ -13,6 +13,7 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from app.database import SessionLocal
 from app.models.user import User
+from app.config import JWT_SECRET_KEY, JWT_ALGORITHM
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
@@ -44,7 +45,7 @@ def get_redis() -> Redis:
     Notes:
         - `decode_responses=True` ensures strings are returned instead of bytes.
     """
-    r = Redis(host="localhost", port=6379, db=0, decode_responses=True)
+    r = Redis(host="redis", port=6379, db=0, decode_responses=True)
     return r
 
 
@@ -67,7 +68,7 @@ def get_current_user(
             - 401 Unauthorized if the user does not exist in the database.
     """
     try:
-        payload = jwt.decode(token, "SECRET_KEY", algorithms=["HS256"])
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=JWT_ALGORITHM)
         user_id: str = payload.get("sub")
         if user_id is None:
             raise HTTPException(status_code=401, detail="Invalid token")

@@ -1,4 +1,3 @@
-
 """
 Configuration module for application settings.
 
@@ -13,8 +12,10 @@ import os
 
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "supersecretkey")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
-REDIS_URL = "redis://localhost:6379"
-DATABASE_URL = "postgresql+psycopg2://user:password@localhost:5432/booksdb"
+REDIS_URL = "redis://redis:6379"
+DATABASE_URL = os.getenv(
+    "DATABASE_URL", "postgresql+psycopg2://postgres:postgres@postgres:5432/booksdb"
+)
 INTERNAL_SECRET = "supersecretinternalkey"
-AUTH_SERVICE_URL = "http://localhost:8001"
+AUTH_SERVICE_URL = "http://auth:8001"
 PUBSUB_MODE = os.getenv("PUBSUB_MODE", "stub")

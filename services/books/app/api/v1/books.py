@@ -6,14 +6,14 @@ This module provides endpoints for managing books in the system, including:
 - Listing books with filters, pagination, and sorting
 - Updating book stock (internal use)
 - Caching book details and listings in Redis
-- Publishing events for book creation, update, deletion, and low stock notifications
+- Publishing pubsub for book creation, update, deletion, and low stock notifications
 
 Redis Caching Strategy:
 -----------------------
 - Book details: `book:{book_id}` (TTL: 1 hour)
 - Book listings: `books:list:{page}:{filters_hash}` (TTL: 15 minutes)
 
-Pub/Sub Events:
+Pub/Sub pubsub:
 ---------------
 - Published:
     - `book.created`: When a new book is added
@@ -34,7 +34,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from fastapi.encoders import jsonable_encoder
 
-from app import schemas, crud, events, auth, deps, cache
+from app import schemas, crud, pubsub, auth, deps, cache
 from app.models import books as book_models, categories as category_models
 
 router = APIRouter(prefix="/api/v1/books", tags=["Books"])
@@ -66,7 +66,7 @@ async def create_book(
         raise HTTPException(status_code=400, detail=str(e))
 
     # Publish event
-    await events.publish_event("book.created", {"id": str(db_book.id)})
+    await pubsub.publish("book.created", {"id": str(db_book.id)})
 
     # Cache book detail
     cache_key = f"book:{db_book.id}"
@@ -173,9 +173,7 @@ async def list_books(
     )
 
     await cache.set_cached_book(
-        cache_key,
-        json.dumps(jsonable_encoder(result)),
-        ttl=900
+        cache_key, json.dumps(jsonable_encoder(result)), ttl=900
     )
     return result
 
@@ -247,7 +245,7 @@ async def update_book(
     db.refresh(db_book)
 
     # Publish event
-    await events.publish_event("book.updated", {"id": str(db_book.id)})
+    await pubsub.publish("book.updated", {"id": str(db_book.id)})
 
     # Update cache
     cache_key = f"book:{book_id}"
@@ -287,7 +285,7 @@ async def delete_book(
     crud.delete_book(db, db_book)
 
     # Publish event
-    await events.publish_event("book.deleted", {"id": str(book_id)})
+    await pubsub.publish("book.deleted", {"id": str(book_id)})
 
     # Delete cache
     cache_key = f"book:{book_id}"
@@ -330,7 +328,7 @@ async def update_stock(
     db.refresh(db_book)
 
     if db_book.stock_quantity < 10:
-        await events.publish_event(
+        await pubsub.publish(
             "book.stock_low",
             {"id": str(db_book.id), "stock_quantity": db_book.stock_quantity},
         )

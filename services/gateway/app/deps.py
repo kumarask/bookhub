@@ -5,7 +5,7 @@ Provides helper functions for authentication and user validation
 to be used as FastAPI dependencies.
 """
 
-from fastapi import HTTPException, Depends, Request
+from fastapi import HTTPException, Request
 from jose import jwt, JWTError
 from app.config import JWT_SECRET_KEY
 

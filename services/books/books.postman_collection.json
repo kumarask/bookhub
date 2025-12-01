@@ -1,0 +1,126 @@
+{
+	"info": {
+		"_postman_id": "5fdb2471-8da2-4d8c-98ad-8a26128e8dbf",
+		"name": "books",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "18149409",
+		"_collection_link": "https://www.postman.com/test11-3782/workspace/bookhub/collection/18149409-5fdb2471-8da2-4d8c-98ad-8a26128e8dbf?action=share&source=collection_link&creator=18149409"
+	},
+	"item": [
+		{
+			"name": "Create Book",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "accept",
+						"value": "application/json"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{TOKEN}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"title\": \"string\",\n  \"author\": \"string\",\n  \"isbn\": \"string\",\n  \"description\": \"string\",\n  \"price\": 0,\n  \"stock_quantity\": 0,\n  \"category\": \"string\",\n  \"publisher\": \"string\",\n  \"published_date\": \"2025-12-01\",\n  \"created_at\": \"2025-12-01\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}",
+					"host": [
+						"{{baseUrl}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Books",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "accept",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{TOKEN}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/?page=1&limit=20&sort_by=title&sort_order=asc",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						""
+					],
+					"query": [
+						{
+							"key": "page",
+							"value": "1"
+						},
+						{
+							"key": "limit",
+							"value": "20"
+						},
+						{
+							"key": "sort_by",
+							"value": "title"
+						},
+						{
+							"key": "sort_order",
+							"value": "asc"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8002/api/v1/books/"
+		},
+		{
+			"value": ""
+		}
+	]
+}

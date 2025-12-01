@@ -18,10 +18,10 @@ Attributes:
 
 import os
 
-AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://localhost:8001")
-BOOKS_SERVICE_URL = os.getenv("BOOKS_SERVICE_URL", "http://localhost:8002")
-ORDERS_SERVICE_URL = os.getenv("ORDERS_SERVICE_URL", "http://localhost:8003")
-REVIEWS_SERVICE_URL = os.getenv("REVIEWS_SERVICE_URL", "http://localhost:8004")
-REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
+AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://auth:8001")
+BOOKS_SERVICE_URL = os.getenv("BOOKS_SERVICE_URL", "http://books:8002")
+ORDERS_SERVICE_URL = os.getenv("ORDERS_SERVICE_URL", "http://orders:8003")
+REVIEWS_SERVICE_URL = os.getenv("REVIEWS_SERVICE_URL", "http://reviews:8004")
+REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379")
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "supersecretkey")
 PUBSUB_MODE = os.getenv("PUBSUB_MODE", "stub")

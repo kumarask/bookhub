@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DATABASE_URL = os.getenv(
-    "DATABASE_URL", "postgresql+psycopg2://user:password@localhost:5432/reviews_db"
+    "DATABASE_URL", "postgresql+psycopg2://postgres:postgres@postgres:5432/reviewsdb"
 )
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
 BOOKS_SERVICE_URL = os.getenv("BOOKS_SERVICE_URL", "http://localhost:8002")

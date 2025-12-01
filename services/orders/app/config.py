@@ -12,9 +12,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 DATABASE_URL = os.getenv(
-    "DATABASE_URL", "postgresql+psycopg2://user:password@localhost:5432/orders_db"
+    "DATABASE_URL", "postgresql+psycopg2://postgres:postgres@postgres:5432/ordersdb"
 )
-REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
+REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379")
 BOOKS_SERVICE_URL = os.getenv("BOOKS_SERVICE_URL", "http://localhost:8002")
 AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://localhost:8001")
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key")

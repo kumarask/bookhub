@@ -3,11 +3,11 @@ services:
   postgres:
     image: postgres:15
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
 
@@ -73,10 +73,10 @@ services:
     build: services/gateway
     container_name: api_gateway
     environment:
-      - AUTH_SERVICE_URL=http://localhost:8001
-      - BOOKS_SERVICE_URL=http://localhost:8002
-      - ORDERS_SERVICE_URL=http://localhost:8003
-      - REVIEWS_SERVICE_URL=http://localhost:8004
+      - AUTH_SERVICE_URL=http://auth:8001
+      - BOOKS_SERVICE_URL=http://books:8002
+      - ORDERS_SERVICE_URL=http://orders:8003
+      - REVIEWS_SERVICE_URL=http://reviews:8004
       - REDIS_URL=redis://redis:6379/0
       - JWT_SECRET_KEY=supersecret
     ports:

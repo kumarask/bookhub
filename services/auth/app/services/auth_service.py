@@ -8,12 +8,14 @@ It integrates with the user service, hashing utilities, and token management
 to support secure authentication workflows.
 """
 
+import datetime
 from sqlalchemy.orm import Session
 from app.security.hashing import verify_password
 from app.security.jwt import create_access_token
 from app.services.user_service import get_user_by_username
 from app.services.token_service import create_refresh_token
-from app.schemas.auth import LoginRequest
+from app.schemas.auth import LoginSchema
+from app.models.refresh_token import RefreshToken
 
 
 def authenticate_user(db: Session, username: str, password: str):
@@ -41,7 +43,7 @@ def authenticate_user(db: Session, username: str, password: str):
     return user
 
 
-def login(db: Session, login_in: LoginRequest):
+def login(db: Session, login_in: LoginSchema):
     """
     Authenticate a user and generate authentication tokens.
 
@@ -68,7 +70,16 @@ def login(db: Session, login_in: LoginRequest):
         return None
 
     access_token = create_access_token(subject=user.id)
-    refresh_token = create_refresh_token(db, user.id)
+    refresh_token = create_refresh_token(user.id, db)
+
+    refresh_token = RefreshToken(
+        user_id=user.id,
+        token=refresh_token,
+        expires_at=datetime.datetime.utcnow() + datetime.timedelta(days=7),
+    )
+
+    # db.add(refresh_token)
+    db.commit()
 
     return {
         "access_token": access_token,

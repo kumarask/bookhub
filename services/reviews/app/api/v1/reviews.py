@@ -272,9 +272,7 @@ async def get_my_reviews(
 
 
 @router.get("/book/{book_id}/summary", response_model=schemas.ReviewSummaryOut)
-async def get_book_review_summary(
-    book_id: UUID, db: Session = Depends(deps.get_db)
-):
+async def get_book_review_summary(book_id: UUID, db: Session = Depends(deps.get_db)):
     """
     Retrieve aggregated review statistics for a book.
 

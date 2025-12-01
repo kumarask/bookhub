@@ -9,6 +9,7 @@ Caching Strategy:
 - Cache review summary: `reviews:summary:{book_id}` (TTL: 15 minutes)
 - Cache user reviews: `reviews:user:{user_id}:page:{page}` (TTL: 10 minutes)
 """
+
 from app.deps import get_redis
 
 

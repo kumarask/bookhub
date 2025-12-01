@@ -71,5 +71,5 @@ def get_redis() -> Redis:
     Notes:
         - `decode_responses=True` ensures strings are returned instead of bytes.
     """
-    r = Redis(host="localhost", port=6379, db=0, decode_responses=True)
+    r = Redis(host="redis", port=6379, db=0, decode_responses=True)
     return r

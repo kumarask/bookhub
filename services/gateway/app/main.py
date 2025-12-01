@@ -70,11 +70,28 @@ async def proxy_request(service_url: str, request: Request):
     async with httpx.AsyncClient() as client:
         url = f"{service_url}{request.url.path.replace('/api/v1', '')}"
         headers = dict(request.headers)
-        method = request.method
-        body = await request.body()
-        response = await client.request(
-            method, url, headers=headers, content=body, params=request.query_params
-        )
+
+        # Forward form data correctly
+        content_type = request.headers.get("content-type", "")
+        if "application/x-www-form-urlencoded" in content_type:
+            form = await request.form()
+            response = await client.request(
+                request.method,
+                url,
+                headers=headers,
+                data=form,
+                params=request.query_params,
+            )
+        else:
+            body = await request.body()
+            response = await client.request(
+                request.method,
+                url,
+                headers=headers,
+                content=body,
+                params=request.query_params,
+            )
+
         return response
 
 

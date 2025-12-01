@@ -99,4 +99,5 @@ def get_user(user_id: str, db: Session = Depends(get_db)):
         "username": user.username,
         "full_name": user.full_name,
         "is_active": user.is_active,
+        "is_admin": user.is_admin,
     }
