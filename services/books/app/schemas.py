@@ -18,7 +18,7 @@ Schemas:
     - CategoryOut: Schema for returning category details with optional book count.
 """
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing import Optional
 from datetime import date, datetime
 from uuid import UUID

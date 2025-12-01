@@ -11,12 +11,8 @@ Functions:
     - delete_cached_book: Remove a cached book entry from Redis.
 """
 
-import redis.asyncio as redis
 import json
-
-from app.config import REDIS_URL
-
-redis_client = redis.Redis.from_url(REDIS_URL, decode_responses=True)
+from app.deps import get_redis
 
 
 async def get_cached_book(book_id: str):
@@ -29,9 +25,9 @@ async def get_cached_book(book_id: str):
     Returns:
         dict | None: The cached book data if present, otherwise None.
     """
-    data = await redis_client.get(f"book:{book_id}")
+    data = await get_redis().get(f"book:{book_id}")
     if data:
-        return json.loads(data)
+        return data
     return None
 
 
@@ -48,7 +44,7 @@ async def set_cached_book(book_id: str, book_data: dict, ttl=3600):
     Returns:
         None
     """
-    await redis_client.set(f"book:{book_id}", json.dumps(book_data), ex=ttl)
+    await get_redis().set(f"book:{book_id}", book_data, ex=ttl)
 
 
 async def delete_cached_book(book_id: str):
@@ -61,4 +57,4 @@ async def delete_cached_book(book_id: str):
     Returns:
         None
     """
-    await redis_client.delete(f"book:{book_id}")
+    await get_redis().delete(f"book:{book_id}")

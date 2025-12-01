@@ -7,10 +7,11 @@ a rating, optional title and comment, along with timestamps for creation
 and updates.
 """
 
-import uuid
 from sqlalchemy import Column, String, Integer, Text, TIMESTAMP
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.sql import func
+
+import uuid
 from app.database import Base
 
 

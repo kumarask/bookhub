@@ -22,8 +22,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
-from app.database import Base
 from sqlalchemy.orm import relationship
+from app.database import Base
 
 
 class Book(Base):

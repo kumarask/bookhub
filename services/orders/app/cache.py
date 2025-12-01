@@ -18,10 +18,7 @@ Functions
 Author: Your Name <your.email@example.com>
 """
 
-import redis.asyncio as redis
-from app.config import REDIS_URL
-
-redis_client = redis.Redis.from_url(REDIS_URL, decode_responses=True)
+from app.deps import get_redis
 
 
 async def get_cache(key: str):
@@ -34,7 +31,7 @@ async def get_cache(key: str):
     Returns:
         str | None: The cached value if it exists, else None.
     """
-    return await redis_client.get(key)
+    return await get_redis().get(key)
 
 
 async def set_cache(key: str, value: str, ttl: int):
@@ -46,7 +43,7 @@ async def set_cache(key: str, value: str, ttl: int):
         value (str): The value to store.
         ttl (int): Time-to-live in seconds for the cached value.
     """
-    await redis_client.set(key, value, ex=ttl)
+    await get_redis().set(key, value, ex=ttl)
 
 
 async def delete_cache(key: str):
@@ -56,4 +53,4 @@ async def delete_cache(key: str):
     Args:
         key (str): The cache key to delete.
     """
-    await redis_client.delete(key)
+    await get_redis().delete(key)

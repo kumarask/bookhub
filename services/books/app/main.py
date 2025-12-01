@@ -12,6 +12,7 @@ Components:
 """
 
 from fastapi import FastAPI
+from app.database import init_db
 from app.api.v1 import books, categories
 
 app = FastAPI(title="Books Service", version="1.0")
@@ -19,3 +20,26 @@ app = FastAPI(title="Books Service", version="1.0")
 # Include API routers
 app.include_router(books.router)
 app.include_router(categories.router)
+
+
+@app.on_event("startup")
+def startup():
+    """
+    FastAPI startup event handler.
+
+    This function is executed when the application starts and is used to
+    initialize the database tables.
+    """
+    init_db()
+
+
+@app.get("/health")
+def health():
+    """
+    Health check endpoint.
+
+    Returns:
+        dict: A simple JSON response indicating the service is running.
+              Example: {"status": "healthy"}
+    """
+    return {"status": "healthy"}

@@ -16,18 +16,12 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 
-def get_db():
+def init_db():
     """
-    Provides a database session for dependency injection.
+    Initialize the database by creating all tables defined in SQLAlchemy models.
 
-    This function yields a SQLAlchemy session that can be used in FastAPI
-    route handlers. The session is automatically closed after use.
-
-    Yields:
-        Session: SQLAlchemy database session
+    Notes:
+        - Uses metadata from all imported models (e.g., User) to create tables.
+        - Should be called once during application startup or migration.
     """
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+    Base.metadata.create_all(bind=engine)

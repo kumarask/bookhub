@@ -34,11 +34,18 @@ Dependencies:
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from uuid import UUID
+
 import json
 from datetime import datetime
+from uuid import UUID
 
-from app import schemas, crud, database, events, cache, deps
+from app import (
+    schemas,
+    crud,
+    cache,
+    deps,
+    pubsub,
+)
 from app.services.books_service import BooksService
 
 router = APIRouter(prefix="/api/v1/orders", tags=["Orders"])
@@ -48,7 +55,7 @@ books_service = BooksService()
 @router.post("/", response_model=schemas.OrderOut, status_code=201)
 async def create_order(
     order: schemas.OrderCreate,
-    db: Session = Depends(database.get_db),
+    db: Session = Depends(deps.get_db),
     user=Depends(deps.get_current_user_dep),
 ):
     """
@@ -74,7 +81,7 @@ async def create_order(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    await events.publish_event("order.created", {"order_id": str(db_order.id)})
+    await pubsub.publish("order.created", {"order_id": str(db_order.id)})
     cache_key = f"order:{db_order.id}"
     await cache.set_cache(
         cache_key,
@@ -89,7 +96,7 @@ async def list_orders(
     status: str = Query(None, regex="^(pending|processing|completed|cancelled)$"),
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
-    db: Session = Depends(database.get_db),
+    db: Session = Depends(deps.get_db),
     user=Depends(deps.get_current_user_dep),
 ):
     """
@@ -125,7 +132,7 @@ async def list_orders(
 @router.get("/{order_id}", response_model=schemas.OrderOut)
 async def get_order_detail(
     order_id: UUID,
-    db: Session = Depends(database.get_db),
+    db: Session = Depends(deps.get_db),
     user=Depends(deps.get_current_user_dep),
 ):
     """
@@ -162,7 +169,7 @@ async def get_order_detail(
 async def update_order_status(
     order_id: UUID,
     payload: schemas.OrderStatusUpdate,
-    db: Session = Depends(database.get_db),
+    db: Session = Depends(deps.get_db),
     user=Depends(deps.get_current_user_dep),
 ):
     """
@@ -204,9 +211,9 @@ async def update_order_status(
     db.refresh(order)
 
     if payload.status == "completed":
-        await events.publish_event("order.completed", {"order_id": str(order.id)})
+        await pubsub.publish("order.completed", {"order_id": str(order.id)})
     elif payload.status == "cancelled":
-        await events.publish_event("order.cancelled", {"order_id": str(order.id)})
+        await pubsub.publish("order.cancelled", {"order_id": str(order.id)})
 
     cache_key = f"order:{order_id}"
     await cache.set_cache(
@@ -221,7 +228,7 @@ async def update_order_status(
 @router.delete("/{order_id}", response_model=dict)
 async def cancel_order(
     order_id: UUID,
-    db: Session = Depends(database.get_db),
+    db: Session = Depends(deps.get_db),
     user=Depends(deps.get_current_user_dep),
 ):
     """
@@ -254,7 +261,7 @@ async def cancel_order(
     db.commit()
     db.refresh(order)
 
-    await events.publish_event("order.cancelled", {"order_id": str(order.id)})
+    await pubsub.publish("order.cancelled", {"order_id": str(order.id)})
 
     cache_key = f"order:{order_id}"
     await cache.set_cache(
@@ -272,7 +279,7 @@ async def cancel_order(
 
 @router.get("/stats", response_model=schemas.OrderStatsOut)
 async def get_order_stats(
-    db: Session = Depends(database.get_db), user=Depends(deps.get_current_user_dep)
+    db: Session = Depends(deps.get_db), user=Depends(deps.get_current_user_dep)
 ):
     """
     Get order statistics for the authenticated user.

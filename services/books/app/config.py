@@ -1,3 +1,13 @@
+
+"""
+Configuration module for application settings.
+
+This module loads environment-specific configuration values such as JWT secrets,
+algorithms, Redis connection URL, and database connection string. It uses
+environment variables when available, falling back to default values for local
+development.
+"""
+
 import os
 
 
@@ -6,3 +16,5 @@ JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 REDIS_URL = "redis://localhost:6379"
 DATABASE_URL = "postgresql+psycopg2://user:password@localhost:5432/booksdb"
 INTERNAL_SECRET = "supersecretinternalkey"
+AUTH_SERVICE_URL = "http://localhost:8001"
+PUBSUB_MODE = os.getenv("PUBSUB_MODE", "stub")

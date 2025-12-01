@@ -11,16 +11,18 @@ These utilities integrate with FastAPI's dependency injection system
 and use OAuth2 Bearer tokens for authentication.
 """
 
+from jose import jwt, JWTError
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from jose import jwt, JWTError
+
 from app.config import (
     JWT_SECRET_KEY as SECRET_KEY,
     JWT_ALGORITHM as ALGORITHM,
+    AUTH_SERVICE_URL as AUTH_URL,
 )
 
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="http://localhost:8001/api/v1/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{AUTH_URL}/api/v1/auth/login")
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):

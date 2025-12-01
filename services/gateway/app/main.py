@@ -100,7 +100,7 @@ async def health_check():
             async with httpx.AsyncClient() as client:
                 r = await client.get(f"{url}/health")
                 services[name] = "healthy" if r.status_code == 200 else "unhealthy"
-        except:
+        except:  # noqa: E722
             services[name] = "unhealthy"
     return {
         "status": "healthy",

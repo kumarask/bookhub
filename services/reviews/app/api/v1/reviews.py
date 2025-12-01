@@ -16,9 +16,17 @@ Features:
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from uuid import UUID
+
 import json
-from app import schemas, crud, database, cache, events, deps
+from uuid import UUID
+
+from app import (
+    schemas,
+    crud,
+    cache,
+    deps,
+    pubsub,
+)
 
 router = APIRouter(prefix="/api/v1/reviews", tags=["Reviews"])
 
@@ -26,7 +34,7 @@ router = APIRouter(prefix="/api/v1/reviews", tags=["Reviews"])
 @router.post("/", response_model=schemas.ReviewOut, status_code=201)
 async def create_review(
     review: schemas.ReviewCreate,
-    db: Session = Depends(database.get_db),
+    db: Session = Depends(deps.get_db),
     user=Depends(deps.get_current_user_dep),
 ):
     """
@@ -53,7 +61,7 @@ async def create_review(
         raise HTTPException(status_code=400, detail=str(e))
 
     # Publish event
-    await events.publish_event("review.created", {"review_id": str(db_review.id)})
+    await pubsub.publish("review.created", {"review_id": str(db_review.id)})
 
     # Clear cache
     await cache.delete_cache(f"reviews:book:{review.book_id}:page:1")
@@ -70,7 +78,7 @@ async def list_book_reviews(
     rating: int = Query(None, ge=1, le=5),
     sort_by: str = Query("created_at", regex="^(created_at|rating)$"),
     sort_order: str = Query("desc", regex="^(asc|desc)$"),
-    db: Session = Depends(database.get_db),
+    db: Session = Depends(deps.get_db),
 ):
     """
     Retrieve paginated reviews for a specific book.
@@ -113,7 +121,7 @@ async def list_book_reviews(
 
 
 @router.get("/{review_id}", response_model=schemas.ReviewOut)
-async def get_review_detail(review_id: UUID, db: Session = Depends(database.get_db)):
+async def get_review_detail(review_id: UUID, db: Session = Depends(deps.get_db)):
     """
     Retrieve a single review by its ID.
 
@@ -138,7 +146,7 @@ async def get_review_detail(review_id: UUID, db: Session = Depends(database.get_
 async def update_review(
     review_id: UUID,
     data: schemas.ReviewUpdate,
-    db: Session = Depends(database.get_db),
+    db: Session = Depends(deps.get_db),
     user=Depends(deps.get_current_user_dep),
 ):
     """
@@ -169,7 +177,7 @@ async def update_review(
 
     review = crud.update_review(db, review, data)
 
-    await events.publish_event("review.updated", {"review_id": str(review.id)})
+    await pubsub.publish("review.updated", {"review_id": str(review.id)})
 
     # Clear cache
     await cache.delete_cache(f"reviews:book:{review.book_id}:page:1")
@@ -182,7 +190,7 @@ async def update_review(
 @router.delete("/{review_id}", status_code=204)
 async def delete_review(
     review_id: UUID,
-    db: Session = Depends(database.get_db),
+    db: Session = Depends(deps.get_db),
     user=Depends(deps.get_current_user_dep),
 ):
     """
@@ -211,7 +219,7 @@ async def delete_review(
 
     crud.delete_review(db, review)
 
-    await events.publish_event("review.deleted", {"review_id": str(review.id)})
+    await pubsub.publish("review.deleted", {"review_id": str(review.id)})
 
     # Clear cache
     await cache.delete_cache(f"reviews:book:{review.book_id}:page:1")
@@ -223,7 +231,7 @@ async def delete_review(
 async def get_my_reviews(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
-    db: Session = Depends(database.get_db),
+    db: Session = Depends(deps.get_db),
     user=Depends(deps.get_current_user_dep),
 ):
     """
@@ -265,7 +273,7 @@ async def get_my_reviews(
 
 @router.get("/book/{book_id}/summary", response_model=schemas.ReviewSummaryOut)
 async def get_book_review_summary(
-    book_id: UUID, db: Session = Depends(database.get_db)
+    book_id: UUID, db: Session = Depends(deps.get_db)
 ):
     """
     Retrieve aggregated review statistics for a book.

@@ -12,7 +12,10 @@ Functions:
 """
 
 from fastapi import Header, HTTPException
+from redis import Redis
+
 from app.config import INTERNAL_SECRET
+from app.database import SessionLocal
 
 
 def verify_internal_secret(x_internal_secret: str = Header(...)):
@@ -35,3 +38,38 @@ def verify_internal_secret(x_internal_secret: str = Header(...)):
     if x_internal_secret != INTERNAL_SECRET:
         raise HTTPException(status_code=403, detail="Invalid internal service secret")
     return True
+
+
+def get_db():
+    """
+    Provide a database session for request handling.
+
+    This function is used as a FastAPI dependency. It yields a database
+    session for the duration of a request and ensures it is closed afterward.
+
+    Yields:
+        Session: A SQLAlchemy database session.
+
+    Ensures:
+        The session is closed after the request is completed, even if an
+        exception occurs.
+    """
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+def get_redis() -> Redis:
+    """
+    Provide a Redis client for FastAPI routes.
+
+    Returns:
+        Redis: Redis client instance connected to localhost:6379, DB 0.
+
+    Notes:
+        - `decode_responses=True` ensures strings are returned instead of bytes.
+    """
+    r = Redis(host="localhost", port=6379, db=0, decode_responses=True)
+    return r

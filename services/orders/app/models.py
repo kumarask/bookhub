@@ -13,7 +13,14 @@ Relationships:
 """
 
 import uuid
-from sqlalchemy import Column, String, DECIMAL, TIMESTAMP, ForeignKey, Integer
+from sqlalchemy import (
+    Column,
+    String,
+    DECIMAL,
+    TIMESTAMP,
+    ForeignKey,
+    Integer,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship

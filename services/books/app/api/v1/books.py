@@ -28,13 +28,13 @@ import json
 from hashlib import md5
 from uuid import UUID
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from fastapi.encoders import jsonable_encoder
 
-from app import schemas, crud, database, cache, events, auth, deps
+from app import schemas, crud, events, auth, deps, cache
 from app.models import books as book_models, categories as category_models
 
 router = APIRouter(prefix="/api/v1/books", tags=["Books"])
@@ -43,7 +43,7 @@ router = APIRouter(prefix="/api/v1/books", tags=["Books"])
 @router.post("/", response_model=schemas.BookOut)
 async def create_book(
     book: schemas.BookCreate,
-    db: Session = Depends(database.get_db),
+    db: Session = Depends(deps.get_db),
     user=Depends(auth.admin_required),
 ):
     """
@@ -51,7 +51,7 @@ async def create_book(
 
     Args:
         book (schemas.BookCreate): Book creation data
-        db (Session, optional): Database session. Defaults to Depends(database.get_db)
+        db (Session, optional): Database session. Defaults to Depends(deps.get_db)
         user: Admin user (injected via dependency)
 
     Raises:
@@ -70,8 +70,10 @@ async def create_book(
 
     # Cache book detail
     cache_key = f"book:{db_book.id}"
-    await cache.redis_client.set(
-        cache_key, json.dumps(jsonable_encoder(db_book)), ex=3600
+    await cache.set_cached_book(
+        cache_key,
+        json.dumps(jsonable_encoder(db_book)),
+        ttl=3600,
     )
 
     return schemas.BookOut.from_orm(db_book)
@@ -79,7 +81,7 @@ async def create_book(
 
 @router.get("/", response_model=schemas.BookListOut)
 async def list_books(
-    db: Session = Depends(database.get_db),
+    db: Session = Depends(deps.get_db),
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     category: Optional[str] = None,
@@ -124,7 +126,7 @@ async def list_books(
     filters_hash = md5(filters.encode()).hexdigest()
     cache_key = f"books:list:{page}:{filters_hash}"
 
-    cached = await cache.redis_client.get(cache_key)
+    cached = await cache.get_cached_book(cache_key)
     if cached:
         return json.loads(cached)
 
@@ -170,14 +172,16 @@ async def list_books(
         pages=(total + limit - 1) // limit,
     )
 
-    await cache.redis_client.set(
-        cache_key, json.dumps(jsonable_encoder(result)), ex=900
+    await cache.set_cached_book(
+        cache_key,
+        json.dumps(jsonable_encoder(result)),
+        ttl=900
     )
     return result
 
 
 @router.get("/{book_id}", response_model=schemas.BookDetailOut)
-async def get_book_detail(book_id: UUID, db: Session = Depends(database.get_db)):
+async def get_book_detail(book_id: UUID, db: Session = Depends(deps.get_db)):
     """
     Get detailed information of a book by ID.
 
@@ -192,7 +196,7 @@ async def get_book_detail(book_id: UUID, db: Session = Depends(database.get_db))
         schemas.BookDetailOut: Detailed book object
     """
     cache_key = f"book:{book_id}"
-    cached = await cache.redis_client.get(cache_key)
+    cached = await cache.get_cached_book(cache_key)
     if cached:
         return json.loads(cached)
 
@@ -201,8 +205,10 @@ async def get_book_detail(book_id: UUID, db: Session = Depends(database.get_db))
         raise HTTPException(status_code=404, detail="Book not found")
 
     book_detail = schemas.BookDetailOut.from_orm(db_book)
-    await cache.redis_client.set(
-        cache_key, json.dumps(jsonable_encoder(book_detail)), ex=3600
+    await cache.set_cached_book(
+        cache_key,
+        json.dumps(jsonable_encoder(book_detail)),
+        ttl=3600,
     )
     return book_detail
 
@@ -211,7 +217,7 @@ async def get_book_detail(book_id: UUID, db: Session = Depends(database.get_db))
 async def update_book(
     book_id: UUID,
     updates: schemas.BookUpdate,
-    db: Session = Depends(database.get_db),
+    db: Session = Depends(deps.get_db),
     user=Depends(auth.admin_required),
 ):
     """
@@ -245,8 +251,10 @@ async def update_book(
 
     # Update cache
     cache_key = f"book:{book_id}"
-    await cache.redis_client.set(
-        cache_key, json.dumps(jsonable_encoder(db_book)), ex=3600
+    await cache.set_cached_book(
+        cache_key,
+        json.dumps(jsonable_encoder(db_book)),
+        ttl=3600,
     )
 
     return schemas.BookOut.from_orm(db_book)
@@ -255,7 +263,7 @@ async def update_book(
 @router.delete("/{book_id}", status_code=204)
 async def delete_book(
     book_id: UUID,
-    db: Session = Depends(database.get_db),
+    db: Session = Depends(deps.get_db),
     user=Depends(auth.admin_required),
 ):
     """
@@ -283,14 +291,14 @@ async def delete_book(
 
     # Delete cache
     cache_key = f"book:{book_id}"
-    await cache.redis_client.delete(cache_key)
+    await cache.delete_cached_book(cache_key)
 
 
 @router.patch("/{book_id}/stock", response_model=schemas.BookStockOut)
 async def update_stock(
     book_id: UUID,
     payload: schemas.BookStockUpdate,
-    db: Session = Depends(database.get_db),
+    db: Session = Depends(deps.get_db),
     _=Depends(deps.verify_internal_secret),
 ):
     """
@@ -328,8 +336,10 @@ async def update_stock(
         )
 
     cache_key = f"book:{book_id}"
-    await cache.redis_client.set(
-        cache_key, json.dumps(jsonable_encoder(db_book)), ex=3600
+    await cache.set_cached_book(
+        cache_key,
+        json.dumps(jsonable_encoder(db_book)),
+        ttl=3600,
     )
 
     return schemas.BookStockOut(

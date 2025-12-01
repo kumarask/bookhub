@@ -16,13 +16,13 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from app.models import categories, books
-from app import schemas, database, cache
+from app import schemas, deps, cache
 
 router = APIRouter(prefix="/api/v1/books/categories", tags=["Categories"])
 
 
 @router.get("/", response_model=List[schemas.CategoryOut])
-async def get_categories(db: Session = Depends(database.get_db)):
+async def get_categories(db: Session = Depends(deps.get_db)):
     """
     Retrieve a list of all book categories.
 
@@ -31,7 +31,7 @@ async def get_categories(db: Session = Depends(database.get_db)):
     improve performance.
 
     Args:
-        db (Session, optional): SQLAlchemy database session. Defaults to Depends(database.get_db).
+        db (Session, optional): SQLAlchemy database session. Defaults to Depends(deps.get_db).
 
     Returns:
         List[schemas.CategoryOut]: A list of categories, each containing:
@@ -41,7 +41,7 @@ async def get_categories(db: Session = Depends(database.get_db)):
             - book_count (int): Number of books associated with the category
     """
     cache_key = "categories:all"
-    cached = await cache.redis_client.get(cache_key)
+    cached = await cache.get_cached_book(cache_key)
     if cached:
         return [schemas.CategoryOut(**c) for c in json.loads(cached)]
 
@@ -62,5 +62,5 @@ async def get_categories(db: Session = Depends(database.get_db)):
             }
         )
 
-    await cache.redis_client.set(cache_key, json.dumps(result), ex=86400)
+    await cache.set_cached_book(cache_key, json.dumps(result), ex=86400)
     return result
